@@ -2,7 +2,7 @@ let user = prompt('User');
 let channel = prompt('Channel');
 let create = confirm('Create new channel? (Cancel to just join...)');
 let $ = x => document.querySelector(x);
-let urlPrefix = 'http://sse.nodehill.com';
+let urlPrefix = 'https://sse.nodehill.com';
 
 start();
 
