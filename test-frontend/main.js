@@ -2,7 +2,7 @@ let user = prompt('User');
 let channel = prompt('Channel');
 let create = confirm('Create new channel? (Cancel to just join...)');
 let $ = x => document.querySelector(x);
-let urlPrefix = 'http://localhost:4000';
+let urlPrefix = 'http://sse.nodehill.com';
 
 start();
 
