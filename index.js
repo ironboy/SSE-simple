@@ -1,4 +1,4 @@
-const port = 4000;
+const port = 4800;
 const debug = false;
 const serveTestFrontend = true;
 const cors = require('cors');
