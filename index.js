@@ -1,5 +1,5 @@
 const port = 4000;
-const debug = true;
+const debug = false;
 const serveTestFrontend = true;
 const cors = require('cors');
 const express = require('express');
