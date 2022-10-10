@@ -113,7 +113,7 @@ function broadcast(channelName, fromUser, data, delayed) {
     // Add to history and keep history at max 100 items
     let c = channels[channelName].history
     c.push(message);
-    while (c.length > 100) { c.shift(); }
+    c.splice(100, Infinity);
   }
   catch (e) { debugError(e); }
 }
