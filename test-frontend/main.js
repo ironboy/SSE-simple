@@ -1,16 +1,12 @@
 let user = prompt('User');
 let channel = prompt('Channel');
-let create = confirm('Create new channel? (Cancel to just join...)');
+let token;
 let $ = x => document.querySelector(x);
-let urlPrefix = 'https://sse.nodehill.com';
+let urlPrefix = location.href.indexOf('https') === 0 ? 'https://sse.nodehill.com' : '';
 
 start();
 
 async function start() {
-
-  if (create) {
-    let r = await (await fetch(urlPrefix + `/api/channel/create/${channel}`, { mode: 'cors' })).json();
-  }
 
   document.body.innerHTML = `
       <h3>Channel ${channel}</h3>
@@ -24,7 +20,11 @@ async function start() {
     send(v);
   });
 
-  const eventSource = new EventSource(urlPrefix + `/api/channel/listen/${channel}/${user}/10`);
+  const eventSource = new EventSource(urlPrefix + `/api/listen/${channel}/${user}/10`);
+
+  eventSource.addEventListener('token', event => {
+    token = JSON.parse(event.data);
+  });
 
   eventSource.onmessage = event => {
     print(JSON.parse(event.data));
@@ -38,7 +38,7 @@ async function start() {
 }
 
 async function send(message) {
-  return await (await fetch(urlPrefix + `/api/send-message/${channel}/${user}`, {
+  return await (await fetch(urlPrefix + `/api/send/${token}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),

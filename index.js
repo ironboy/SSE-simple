@@ -1,130 +1,136 @@
+// Settings
 const port = 4800;
-const debug = false;
+const debug = true;
 const serveTestFrontend = true;
+
+// Import dependencies
 const cors = require('cors');
 const express = require('express');
+
+// Create app and add middleware
 const app = express();
-
 app.use(cors());
-app.use(express.json({ limit: '1KB' }));
+app.use(express.json({ limit: '10KB' }));
 serveTestFrontend && app.use(express.static('test-frontend'));
-app.use((error, req, res, next) => 
-  error ? res.send({ error }) : next()
-);
+app.use((error, req, res, next) => error ? res.send({ error }) : next());
 
+// Async sleep
 const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+// Memory for channels and tokens (idenfifiers for users)
 const channels = {};
+const tokens = {}
 
-app.get('/api/channel/create/:channel', async (req, res) => {
+// Start lisetning to or create a chennel
+// /api/listen/:channelName/:userName
+// /api/listen/:channelName/:userName/:historyItems
+app.get('/api/listen/:channelName/:userName/:historyItems', startListener);
+app.get('/api/listen/:channelName/:userName', startListener);
+async function startListener(req, res){
   try {
-    let { channel } = req.params;
-    if (channels[channel]) {
-      res.json({ error: `Channel '${channel}' already exists. Can not create.` });
-    }
-    else {
-      channels[channel] = {};
-      res.json({ success: `Channel '${channel}' created. Join within 30 seconds!` });
-      await sleep(30000);
-      if (!Object.keys(channels[channel]).length) {
-        delete channels[channel];
-      }
-    }
-  } catch (e) { debugError(e); }
-});
-
-const startListener = async (req, res) => {
-  try {
-    let { channel, user, historyItems } = req.params;
+    let { channelName, userName, historyItems } = req.params;
     res.header({
       'Connection': 'keep-alive',
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache'
     });
-    if (user === 'system') {
-      errorInSSE(res, `Forbidden username 'system'.`);
+    // Username 'system' is reserved for the system
+    if (userName === 'system') {
+      sendError(res, `Forbidden username 'system'.`);
       return
     }
-    if (!channels[channel]) {
-      errorInSSE(res, `No channel '${channel}' exists.`);
+    // Create channel if it does not exist
+    if (!channels[channelName]) {
+      channels[channelName] = { users: {}, history: [] }
+      broadcast(channelName, 'system', `User '${userName}' created the channel '${channelName}'.`);
+    }
+    let channel = channels[channelName];
+    // If a user with the name is already connected do not allow
+    if (channel.users[userName]) {
+      sendError(res, `User '${user}' already exists in '${channelName}' . Can not join/listen!`);
       return;
     }
-    let channelName = channel;
-    channel = channels[channel];
-    channel.users = channel.users || {};
-    if (channel.users[user]) {
-      errorInSSE(res, `User '${user}' already exists in '${channelName}' . Can not join/listen!`);
-      return;
-    }
-    channel.users[user] = { req, res };
-    req.on('close', async () => {
-      delete channel.users[user];
-      send(channelName, 'system', `User '${user}' left channel '${channelName}'.`);
-      await sleep(30000);
-      if (!Object.keys(channel.users).length) {
-        // Delete channel if no users left
-        delete channels[channelName];
-      }
-    });
-    await sleep(100);
+    // Add user
+    channel.users[userName] = res;
+    let token = [...new Array(8)].map(x => String
+      .fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+    tokens[token] = { channelName, userName };
+    res.write(`event: token\ndata: ${JSON.stringify(token)}\n\n`);
+    broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
+    // Send history items if asked for
     if (historyItems && !isNaN(historyItems) && channel.history) {
       for (item of channel.history.slice().splice(-historyItems)) {
         res.write(item);
       }
     }
-    send(channelName, 'system', `User ${user} joined channel '${channelName}'.`);
+    // On connection close delete user
+    req.on('close', async () => {
+      delete channel.users[userName];
+      delete tokens[token];
+      broadcast(channelName, 'system', `User '${userName}' left channel '${channelName}'.`);
+      // Delete channel if no users left (wait 30 seconds and check once more)
+      if (!Object.keys(channel.users).length) {
+        await sleep(30000);
+        !Object.keys(channel.users).length && delete channels[channelName];
+      }
+    });
   }
   catch (e) { debugError(e); }
 }
 
-app.get('/api/channel/listen/:channel/:user/:historyItems', startListener);
-app.get('/api/channel/listen/:channel/:user', startListener);
-
-app.post('/api/send-message/:channel/:user', (req, res) => {
+// Send a message
+app.post('/api/send/:token', (req, res) => {
   try {
-    let { channel, user } = req.params;
-    if (!channels[channel]) {
-      res.json({ error: `No channel '${channel}' exists.` });
+    let { token } = req.params;
+    let { channelName, userName } = (tokens[token] || {});
+    if (!channels[channelName]?.users?.[userName]) {
+      res.json({ error: `Invalid token. Can not send message!` });
       return;
     }
-    if (!channels[channel].users[user]) {
-      res.json({ error: `User ${user} does not exist in channel {channel}. Can not send message!` });
-      return;
-    }
-    send(channel, user, req.body.message);
+    broadcast(channelName, userName, req.body.message);
     res.json({ success: 'Sent message.' });
   }
   catch (e) { debugError(e); }
 });
 
-function send(channel, user, data) {
+// Broadcast - send to everyone in a channel
+function broadcast(channelName, fromUser, data, delayed) {
+  // Move to next tick in event loop
+  if (!delayed) {
+    setTimeout(() => broadcast(channelName, fromUser, data, true), 0);
+    return;
+  }
+  // Broadcast message
   try {
-    if (!channels[channel] || !channels[channel].users) { return; }
-    let message = { timestamp: new Date().toISOString(), user, data };
-    for (let { req, res } of Object.values(channels[channel].users)) {
-      let toWrite = `event: message\n` +
-        `data: ${JSON.stringify(message)}\n\n`;
-      res.write(toWrite);
-      let c = channels[channel].history = channels[channel].history || [];
-      c.push(toWrite);
-      while (c.length > 100) { c.shift(); } // max 100 items in history
+    if (!channels[channelName]?.users) { return; }
+    let message = `event: message\ndata: ${JSON.stringify({
+      timestamp: new Date().toISOString(), user: fromUser, data
+    })}\n\n`;
+    // Send to everyone
+    for (let res of Object.values(channels[channelName].users)) {
+      res.write(message);
     }
+    // Add to history and keep history at max 100 items
+    let c = channels[channelName].history
+    c.push(message);
+    while (c.length > 100) { c.shift(); }
   }
   catch (e) { debugError(e); }
 }
 
-function errorInSSE(res, error) {
+// Error reporting
+function sendError(res, error) {
   try {
-    res.write(
-      `event: error\n` +
-      `data: ${JSON.stringify(error)}\n\n`
-    );
+    res.write(`event: error\ndata: ${JSON.stringify(error)}\n\n`);
     res.end();
   }
   catch (e) { debugError(e); }
 }
 
+// Internal error reporting
 function debugError(error) {
   debug && console.log(error);
 }
 
+// Start Express app
 app.listen(port, () => console.log('Listening on port ' + port));
