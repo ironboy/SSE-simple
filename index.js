@@ -47,7 +47,7 @@ async function startListener(req, res){
     let channel = channels[channelName];
     // If a user with the name is already connected do not allow
     if (channel.users[userName]) {
-      sendError(res, `User '${user}' already exists in '${channelName}' . Can not join/listen!`);
+      sendError(res, `User '${userName}' already exists in '${channelName}' . Can not join/listen!`);
       return;
     }
     // Add user
