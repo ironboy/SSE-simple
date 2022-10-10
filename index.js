@@ -28,7 +28,7 @@ app.get('/api/listen/:channelName/:userName/:newerThan', startListener);
 app.get('/api/listen/:channelName/:userName', startListener);
 async function startListener(req, res){
   try {
-    let { channelName, userName, historyItems } = req.params;
+    let { channelName, userName, newerThan } = req.params;
     res.header({
       'Connection': 'keep-alive',
       'Content-Type': 'text/event-stream',
