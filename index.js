@@ -21,10 +21,10 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
 const channels = {};
 const tokens = {}
 
-// Start lisetning to or create a chennel
+// Start listening to or create a chennel
 // /api/listen/:channelName/:userName
 // /api/listen/:channelName/:userName/:historyItems
-app.get('/api/listen/:channelName/:userName/:historyItems', startListener);
+app.get('/api/listen/:channelName/:userName/:newerThan', startListener);
 app.get('/api/listen/:channelName/:userName', startListener);
 async function startListener(req, res){
   try {
@@ -58,11 +58,9 @@ async function startListener(req, res){
     res.write(`event: token\ndata: ${JSON.stringify(token)}\n\n`);
     broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
     // Send history items if asked for
-    if (historyItems && !isNaN(historyItems) && channel.history) {
-      for (item of channel.history.slice().splice(-historyItems)) {
-        res.write(item);
-      }
-    }
+    newerThan && !isNaN(newerThan) && channel.history
+      .filter(({ timestamp: x }) => x > newerThan)
+      .forEach(x => res.write(x))
     // On connection close delete user
     req.on('close', async () => {
       delete channel.users[userName];
@@ -104,7 +102,7 @@ function broadcast(channelName, fromUser, data, delayed) {
   try {
     if (!channels[channelName]?.users) { return; }
     let message = `event: message\ndata: ${JSON.stringify({
-      timestamp: new Date().toISOString(), user: fromUser, data
+      timestamp: Date.now(), user: fromUser, data
     })}\n\n`;
     // Send to everyone
     for (let res of Object.values(channels[channelName].users)) {
