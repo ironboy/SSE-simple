@@ -1,6 +1,6 @@
 let user = prompt('User');
 let channel = prompt('Channel');
-let token;
+let token, latest = 0;
 let $ = x => document.querySelector(x);
 let urlPrefix = location.href.indexOf('https') === 0 ? 'https://sse.nodehill.com' : '';
 
@@ -25,7 +25,7 @@ async function start() {
 }
 
 function startConnection() {
-  const eventSource = new EventSource(urlPrefix + `/api/listen/${channel}/${user}/10`);
+  const eventSource = new EventSource(urlPrefix + `/api/listen/${channel}/${user}/${latest}`);
 
   eventSource.addEventListener('token', event => {
     token = JSON.parse(event.data);
@@ -54,9 +54,14 @@ async function send(message) {
 
 function print(d) {
   let { timestamp, user, data } = d;
+  let date = new Date(timestamp);
+  latest = timestamp;
   let div = document.createElement('div');
   div.innerHTML = `
-    <p>${timestamp.split('T').join(' ').split('.')[0]}</p>
+    <p>
+      ${date.toLocaleDateString('sv-SE')}
+      ${date.toLocaleTimeString('sv-SE')}
+      </p>
     <p>${user}: ${data}</p><br>
   `;
   $('.messages').append(div);
