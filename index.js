@@ -118,6 +118,17 @@ function broadcast(channelName, fromUser, data, delayed) {
   catch (e) { debugError(e); }
 }
 
+// Keep alive message/comment send every 15:th second on every channel
+async function keepAlive() {
+  for (let channelName of Object.keys(channels)) {
+    for (let res of Object.values(channels[channelName].users)) {
+      res.write(':keepalive\n\n');
+    }
+  }
+  await sleep(15000);
+  keepAlive();
+}
+
 // Error reporting
 function sendError(res, error) {
   try {
@@ -132,5 +143,6 @@ function debugError(error) {
   debug && console.log(error);
 }
 
-// Start Express app
+// Start Express app + keep alive
 app.listen(port, () => console.log('Listening on port ' + port));
+keepAlive();
