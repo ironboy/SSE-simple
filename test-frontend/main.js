@@ -20,6 +20,11 @@ async function start() {
     send(v);
   });
 
+  startConnection();
+
+}
+
+function startConnection() {
   const eventSource = new EventSource(urlPrefix + `/api/listen/${channel}/${user}/10`);
 
   eventSource.addEventListener('token', event => {
@@ -33,9 +38,10 @@ async function start() {
   eventSource.onerror = error => {
     console.error(error);
     eventSource.close();
+    setTimeout(startConnection, 1000)
   }
-
 }
+
 
 async function send(message) {
   return await (await fetch(urlPrefix + `/api/send/${token}`, {
