@@ -56,9 +56,10 @@ const startListener = async (req, res) => {
       return;
     }
     channel.users[user] = { req, res };
-    req.on('close', () => {
+    req.on('close', async () => {
       delete channel.users[user];
       send(channelName, 'system', `User '${user}' left channel '${channelName}'.`);
+      await sleep(30000);
       if (!Object.keys(channel.users).length) {
         // Delete channel if no users left
         delete channels[channelName];
