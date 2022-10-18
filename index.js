@@ -55,7 +55,7 @@ async function startListener(req, res) {
     let token = [...new Array(8)].map(x => String
       .fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
     tokens[token] = { channelName, userName };
-    res.write(`event: token\ndata: ${JSON.stringify(token)}\n\n`);
+    writer(res, `event: token\ndata: ${JSON.stringify(token)}\n\n`);
     broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
     // Send history items if asked for
     console.log(userName, channelName, newerThan, channel.history)
@@ -63,7 +63,7 @@ async function startListener(req, res) {
       .filter(({ timestamp }) => timestamp > +newerThan)
       .forEach(({ rawMessage }) => {
         console.log('writing to ', userName, rawMessage);
-        res.write(rawMessage)
+        writer(res, rawMessage)
       });
     // On connection close delete user
     req.on('close', async () => {
@@ -110,7 +110,7 @@ function broadcast(channelName, fromUser, data, delayed) {
     })}\n\n`;
     // Send to everyone
     for (let res of Object.values(channels[channelName].users)) {
-      res.write(message);
+      writer(res, message);
     }
     // Add to history and keep history at max 100 items
     let c = channels[channelName].history
@@ -124,17 +124,22 @@ function broadcast(channelName, fromUser, data, delayed) {
 async function keepAlive() {
   for (let channelName of Object.keys(channels)) {
     for (let res of Object.values(channels[channelName].users)) {
-      res.write(':keepalive\n\n');
+      writer(res, ':keepalive\n\n');
     }
   }
   await sleep(15000);
   keepAlive();
 }
 
+// Write to response object
+function write(res, data) {
+  setTimeout(() => res.write(data), 1);
+}
+
 // Error reporting
 function sendError(res, error) {
   try {
-    res.write(`event: error\ndata: ${JSON.stringify(error)}\n\n`);
+    writer(res, `event: error\ndata: ${JSON.stringify(error)}\n\n`);
     res.end();
   }
   catch (e) { debugError(e); }
