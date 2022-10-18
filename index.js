@@ -60,10 +60,7 @@ async function startListener(req, res) {
     // Send history items if asked for
     newerThan !== undefined && !isNaN(newerThan) && channel.history
       .filter(({ timestamp }) => timestamp > +newerThan)
-      .forEach(({ rawMessage }) => {
-        console.log('writing to ', userName, rawMessage);
-        writer(res, rawMessage)
-      });
+      .forEach(({ rawMessage }) => writer(res, rawMessage));
     // On connection close delete user
     req.on('close', async () => {
       delete channel.users[userName];
