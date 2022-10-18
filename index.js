@@ -23,10 +23,10 @@ const tokens = {}
 
 // Start listening to or create a chennel
 // /api/listen/:channelName/:userName
-// /api/listen/:channelName/:userName/:historyItems
+// /api/listen/:channelName/:userName/:newerThan
 app.get('/api/listen/:channelName/:userName/:newerThan', startListener);
 app.get('/api/listen/:channelName/:userName', startListener);
-async function startListener(req, res){
+async function startListener(req, res) {
   try {
     let { channelName, userName, newerThan } = req.params;
     res.header({
