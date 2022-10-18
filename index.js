@@ -137,6 +137,7 @@ timeoutSettings = [];
 function writer(res, data) {
   timeoutSettings.push(res);
   let ms = timeoutSettings.filter(x => x === res).length * 10;
+  console.log("Last check", ms)
   setTimeout(() => {
     res.write(data);
     let i = timeoutSettings.find(x => x === res);
