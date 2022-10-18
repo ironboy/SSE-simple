@@ -58,7 +58,6 @@ async function startListener(req, res) {
     writer(res, `event: token\ndata: ${JSON.stringify(token)}\n\n`);
     broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
     // Send history items if asked for
-    console.log(userName, channelName, newerThan, channel.history)
     newerThan !== undefined && !isNaN(newerThan) && channel.history
       .filter(({ timestamp }) => timestamp > +newerThan)
       .forEach(({ rawMessage }) => {
@@ -132,6 +131,11 @@ async function keepAlive() {
 }
 
 // Write to response object
+// it turns out that events get lost if sent exactly at the same time
+// this might be due to something in server proxy
+// since not replicated locally
+// so: add 10 ms delay per message to same res/user
+// when several messages in a row... seems to work!
 timeoutSettings = [];
 function writer(res, data) {
   timeoutSettings.push(res);
