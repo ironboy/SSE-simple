@@ -136,11 +136,10 @@ async function keepAlive() {
 timeoutSettings = [];
 function writer(res, data) {
   timeoutSettings.push(res);
-  let ms = timeoutSettings.filter(x => x === res).length * 10;
-  console.log("Last check", ms)
+  let ms = timeoutSettings.filter(x => x === res).length * 10 - 5;
   setTimeout(() => {
     res.write(data);
-    let i = timeoutSettings.find(x => x === res);
+    let i = timeoutSettings.findIndex(x => x === res);
     if (i >= 0) { timeoutSettings.splice(i, 1); }
   }, ms);
 }
