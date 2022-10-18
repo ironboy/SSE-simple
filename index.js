@@ -132,7 +132,7 @@ async function keepAlive() {
 }
 
 // Write to response object
-function write(res, data) {
+function writer(res, data) {
   setTimeout(() => res.write(data), 1);
 }
 
