@@ -59,7 +59,7 @@ async function startListener(req, res) {
     broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
     // Send history items if asked for
     newerThan && !isNaN(newerThan) && channel.history
-      .filter(({ timestamp: x }) => x > newerThan)
+      .filter(({ timestamp: x }) => x > +newerThan)
       .forEach(x => res.write(x))
     // On connection close delete user
     req.on('close', async () => {
