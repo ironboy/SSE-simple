@@ -132,8 +132,15 @@ async function keepAlive() {
 }
 
 // Write to response object
+timeoutSettings = [];
 function writer(res, data) {
-  setTimeout(() => res.write(data), 1);
+  timeoutSettings.push(res);
+  let ms = timeoutSettings.filter(x => x === res).length * 10;
+  setTimeout(() => {
+    res.write(data);
+    let i = timeoutSettings.find(x => x === res);
+    if (i >= 0) { timeoutSettings.splice(i, 1); }
+  }, ms);
 }
 
 // Error reporting
