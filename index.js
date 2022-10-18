@@ -58,6 +58,7 @@ async function startListener(req, res) {
     res.write(`event: token\ndata: ${JSON.stringify(token)}\n\n`);
     broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
     // Send history items if asked for
+    console.log(userName, channelName, newerThan, channel.history)
     newerThan !== undefined && !isNaN(newerThan) && channel.history
       .filter(({ timestamp }) => timestamp > +newerThan)
       .forEach(({ rawMessage }) => res.write(rawMessage))
