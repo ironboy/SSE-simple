@@ -59,8 +59,8 @@ async function startListener(req, res) {
     broadcast(channelName, 'system', `User ${userName} joined channel '${channelName}'.`);
     // Send history items if asked for
     newerThan !== undefined && !isNaN(newerThan) && channel.history
-      .filter(({ timestamp: x }) => x > +newerThan)
-      .forEach(x => res.write(x))
+      .filter(({ timestamp }) => timestamp > +newerThan)
+      .forEach(({ rawMessage }) => res.write(rawMessage))
     // On connection close delete user
     req.on('close', async () => {
       delete channel.users[userName];
@@ -110,7 +110,7 @@ function broadcast(channelName, fromUser, data, delayed) {
     }
     // Add to history and keep history at max 100 items
     let c = channels[channelName].history
-    c.push(message);
+    c.push({ timestamp: Date.now(), rawMessage: message });
     c.splice(100, Infinity);
   }
   catch (e) { debugError(e); }
